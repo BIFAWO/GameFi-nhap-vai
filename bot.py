@@ -9,8 +9,9 @@ from telegram.ext.filters import TEXT, COMMAND
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Google Sheets URL (CSV Format)
+# Google Sheets URLs (CSV Format)
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
+QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=123456"  # Replace with actual GID for Questions
 
 # Fetch data from Google Sheets
 def fetch_csv_data(url):
@@ -19,7 +20,7 @@ def fetch_csv_data(url):
         response.raise_for_status()
         decoded_content = response.content.decode("utf-8")
         data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
-        logger.info("Fetched data: %s", data)  # Log fetched data
+        logger.info("Fetched data: %s", data)
         return data
     except Exception as e:
         logger.error("Error fetching CSV data: %s", e)
@@ -43,7 +44,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # /play command handler
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("User %s started playing", update.effective_user.username)
     decision_points = fetch_csv_data(DECISION_POINTS_URL)
     if not decision_points:
         if update.message:
@@ -60,9 +60,7 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         point = decision_points[current_point]
         scenario = point[0]
         option_1 = point[1]
-        time_1 = point[2]
         option_2 = point[3]
-        time_2 = point[4]
 
         # Log the current decision point
         logger.info("Current decision point: %s", point)
@@ -71,16 +69,16 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['current_scenario'] = {
             "scenario": scenario,
             "option_1": option_1,
-            "time_1": int(time_1),
+            "time_1": int(point[2]),
             "option_2": option_2,
-            "time_2": int(time_2),
+            "time_2": int(point[4]),
             "prestige_star": point[5] if len(point) > 5 else None,
         }
 
         message = (
             f"🗺️ *{scenario}*\n\n"
-            f"1️⃣ {option_1} (+{time_1} giây)\n"
-            f"2️⃣ {option_2} (+{time_2} giây)\n\n"
+            f"1️⃣ {option_1}\n"
+            f"2️⃣ {option_2}\n\n"
             f"⏩ Nhập số 1 hoặc 2 để chọn."
         )
         if update.message:
@@ -107,26 +105,55 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     time_cost = current_scenario[time_key]
     prestige_star = current_scenario['prestige_star']
 
+    # Update user stats
     context.user_data['time'] += time_cost
+    if prestige_star and prestige_star == f"Option {user_choice}":
+        context.user_data['prestige_stars'] += 1
 
     response = (
         f"✅ Bạn đã chọn: {chosen_option}\n"
-        f"⏱️ Thời gian thêm: {time_cost} giây.\n"
+        f"⏱️ Thời gian bạn cần để hoàn thành việc này là: {time_cost} giây.\n"
+        f"⏱️ Tổng thời gian chơi của bạn đến giờ là: {context.user_data['time']} giây.\n"
+        f"🌟 Tổng Ngôi sao danh giá của bạn là: {context.user_data['prestige_stars']}."
     )
-    if prestige_star and prestige_star == f"Option {user_choice}":
-        context.user_data['prestige_stars'] += 1
-        response += "🌟 Bạn nhận được một Ngôi sao danh giá!"
-
     if update.message:
         await update.message.reply_text(response)
 
-    # Proceed to the next point
-    context.user_data['current_point'] += 1
-    await play(update, context)
+    # Fetch and present a question after the decision point
+    await ask_question(update, context)
+
+# Fetch and present a question
+async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    questions = fetch_csv_data(QUESTIONS_URL)
+    if not questions:
+        if update.message:
+            await update.message.reply_text("❌ Không thể tải câu hỏi. Vui lòng thử lại sau.")
+        return
+
+    question = questions.pop(0)  # Get the first question
+    question_text = question[0]
+    options = question[1:4]
+    correct_answer = question[4]
+
+    # Save the correct answer for validation
+    context.user_data['current_question'] = {
+        "question_text": question_text,
+        "options": options,
+        "correct_answer": correct_answer,
+    }
+
+    message = (
+        f"🤔 *Câu hỏi:* {question_text}\n\n"
+        f"1️⃣ {options[0]}\n"
+        f"2️⃣ {options[1]}\n"
+        f"3️⃣ {options[2]}\n\n"
+        f"⏩ Nhập số 1, 2 hoặc 3 để trả lời."
+    )
+    if update.message:
+        await update.message.reply_text(message, parse_mode="Markdown")
 
 # Summarize the game
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    score = context.user_data.get('score', 0)
     time = context.user_data.get('time', 0)
     prestige_stars = context.user_data.get('prestige_stars', 0)
 
