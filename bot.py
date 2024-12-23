@@ -12,22 +12,23 @@ logger = logging.getLogger(__name__)
 
 # Google Sheets URLs
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
-QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1913354117"  # GID của tab Questions
+QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1301413371"  # Đúng URL cho Questions
 
-# Fetch data from Google Sheets
-def fetch_csv_data(url):
+# Hàm tải dữ liệu từ Google Sheets
+def fetch_csv_data(url, tab_name):
     try:
+        logger.info(f"Fetching data from {tab_name} at {url}")
         response = requests.get(url)
         response.raise_for_status()
         decoded_content = response.content.decode("utf-8")
         data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
-        logger.info("Dữ liệu tải về từ %s: %s", url, data[:5])  # Hiện 5 dòng đầu tiên để debug
+        logger.info(f"Data fetched from {tab_name}: {data[:5]}")  # Log 5 dòng đầu
         return data[1:]  # Bỏ dòng tiêu đề
     except Exception as e:
-        logger.error("Không thể tải dữ liệu từ %s: %s", url, e)
+        logger.error(f"Error fetching data from {tab_name}: {e}")
         return []
 
-# /start
+# /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['used_scenarios'] = set()
     context.user_data['used_questions'] = set()
@@ -37,15 +38,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     welcome_message = (
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
-        "⏩ Gõ /play để bắt đầu hành trình!"
+        "⏩ Gõ /play để bắt đầu hành trình của bạn!"
     )
     await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
-# /play
+# /play command
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    decision_points = fetch_csv_data(DECISION_POINTS_URL)
+    decision_points = fetch_csv_data(DECISION_POINTS_URL, "Decision Points")
     if not decision_points:
-        await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Thử lại sau.")
+        await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
         return
 
     unused_scenarios = [p for p in decision_points if p[0] not in context.user_data['used_scenarios']]
@@ -77,7 +78,7 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(message, parse_mode="Markdown")
 
-# Xử lý lựa chọn
+# Handle choices
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text
     current_scenario = context.user_data.get('current_scenario', None)
@@ -107,9 +108,9 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await ask_question(update, context)
 
-# Hiện câu hỏi
+# Ask questions
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    questions = fetch_csv_data(QUESTIONS_URL)
+    questions = fetch_csv_data(QUESTIONS_URL, "Questions")
     if not questions:
         await update.message.reply_text("❌ Không thể tải câu hỏi.")
         return
@@ -124,13 +125,6 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     question_text = question[0]
     options = question[1:4]
-    correct_answer = question[4]
-
-    context.user_data['current_question'] = {
-        "question_text": question_text,
-        "options": options,
-        "correct_answer": correct_answer,
-    }
 
     message = (
         f"🤔 *Câu hỏi:* {question_text}\n\n"
@@ -141,7 +135,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(message, parse_mode="Markdown")
 
-# Tổng kết
+# Summarize game
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     score = context.user_data.get('score', 0)
     time = context.user_data.get('time', 0)
@@ -150,13 +144,12 @@ async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     summary = (
         f"🎉 **Kết thúc!** 🎉\n\n"
         f"⏳ Thời gian: **{time} giây**\n"
-        f"🏆 Điểm số: **{score}**\n"
         f"🌟 Ngôi sao danh giá: **{prestige_stars}**\n\n"
         f"✨ Cảm ơn bạn đã tham gia!"
     )
     await update.message.reply_text(summary, parse_mode="Markdown")
 
-# Chạy bot
+# Run bot
 def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
