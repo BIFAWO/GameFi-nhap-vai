@@ -23,12 +23,7 @@ def fetch_csv_data(url):
         logger.error("Error fetching CSV data: %s", e)
         return []
 
-async def log_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Log all incoming updates."""
-    logger.info("Received update: %s", update)
-
-def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /start command."""
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Handling /start from user: %s", update.effective_user.username)
     context.user_data['current_point'] = 0
     context.user_data['score'] = 0
@@ -40,19 +35,20 @@ def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Bạn sẽ bước vào một hành trình phiêu lưu đầy thách thức.\n"
         "⏩ Gõ /play để bắt đầu hành trình của bạn!"
     )
-    update.message.reply_text(welcome_message, parse_mode="Markdown")
+    if update.message:
+        await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
-def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start the game by showing the first decision point."""
+async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("User %s started playing", update.effective_user.username)
     decision_points = fetch_csv_data(DECISION_POINTS_URL)
     if not decision_points:
-        update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
+        if update.message:
+            await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
         return
 
     current_point = context.user_data.get('current_point', 0)
     if current_point >= len(decision_points):
-        update.message.reply_text("🎉 Hành trình kết thúc!")
+        await summarize_game(update, context)
         return
 
     point = decision_points[current_point]
@@ -62,10 +58,28 @@ def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"2️⃣ {point[3]} (+{point[4]} giây)\n\n"
         f"⏩ Nhập số 1 hoặc 2 để chọn."
     )
-    update.message.reply_text(message, parse_mode="Markdown")
+    if update.message:
+        await update.message.reply_text(message, parse_mode="Markdown")
+
+async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    score = context.user_data.get('score', 0)
+    time = context.user_data.get('time', 0)
+    prestige_stars = context.user_data.get('prestige_stars', 0)
+
+    summary = (
+        f"🎉 **Hành trình của bạn đã kết thúc!** 🎉\n\n"
+        f"⏳ *Tổng thời gian:* **{time} giây**\n"
+        f"🏆 *Tổng điểm:* **{score} điểm**\n"
+        f"🌟 *Ngôi sao danh giá:* **{prestige_stars}**\n\n"
+        f"✨ **Cảm ơn bạn đã tham gia GameFi Nhập Vai!** ✨"
+    )
+    if update.message:
+        await update.message.reply_text(summary, parse_mode="Markdown")
+
+async def log_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info("Update received: %s", update)
 
 def main():
-    """Main function to run the bot."""
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
 
