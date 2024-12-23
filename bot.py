@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Google Sheets URLs (CSV Format)
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
-QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1YOUR_SHEET_ID/export?format=csv&gid=123456"  # Replace with actual GID for Questions
+QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1162745298"  # Adjusted GID for Questions tab
 
 # Fetch data from Google Sheets
 def fetch_csv_data(url):
@@ -21,16 +21,17 @@ def fetch_csv_data(url):
         response.raise_for_status()
         decoded_content = response.content.decode("utf-8")
         data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
-        logger.info("Fetched data: %s", data)
+        logger.info("Fetched data from URL %s: %s", url, data[:5])  # Log first 5 rows for debugging
         return data[1:]  # Skip header row
     except Exception as e:
-        logger.error("Error fetching CSV data: %s", e)
+        logger.error("Error fetching CSV data from %s: %s", url, e)
         return []
 
 # /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Handling /start from user: %s", update.effective_user.username)
     context.user_data['used_scenarios'] = set()
+    context.user_data['used_questions'] = set()
     context.user_data['score'] = 0
     context.user_data['time'] = 0
     context.user_data['prestige_stars'] = 0
@@ -125,7 +126,15 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Không thể tải câu hỏi. Vui lòng thử lại sau.")
         return
 
-    question = random.choice(questions)  # Randomly select a question
+    unused_questions = [q for q in questions if q[0] not in context.user_data['used_questions']]
+    if not unused_questions:
+        if update.message:
+            await update.message.reply_text("❌ Không còn câu hỏi nào để trả lời.")
+        return
+
+    question = random.choice(unused_questions)
+    context.user_data['used_questions'].add(question[0])  # Mark question as used
+
     question_text = question[0]
     options = question[1:4]
     correct_answer = question[4]
