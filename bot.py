@@ -1,8 +1,9 @@
 import logging
 import requests
 import csv
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update, constants
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
+from telegram import filters
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -114,7 +115,7 @@ def main():
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("play", play))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_choice))
+    dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_choice))
 
     updater.start_polling()
     updater.idle()
