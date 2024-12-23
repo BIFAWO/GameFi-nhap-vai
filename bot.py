@@ -3,7 +3,7 @@ import requests
 import csv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes
-from telegram.ext.filters import TEXT, Command
+from telegram.ext.filters import TEXT, COMMAND
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -114,7 +114,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
-    application.add_handler(MessageHandler(TEXT & ~Command, handle_choice))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
 
     application.run_polling()
 
