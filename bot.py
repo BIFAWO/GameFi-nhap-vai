@@ -1,6 +1,7 @@
 import logging
 import requests
 import csv
+import random
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes
 from telegram.ext.filters import TEXT, COMMAND
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Google Sheets URLs (CSV Format)
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
-QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=123456"  # Replace with actual GID for Questions
+QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1YOUR_SHEET_ID/export?format=csv&gid=123456"  # Replace with actual GID for Questions
 
 # Fetch data from Google Sheets
 def fetch_csv_data(url):
@@ -21,7 +22,7 @@ def fetch_csv_data(url):
         decoded_content = response.content.decode("utf-8")
         data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
         logger.info("Fetched data: %s", data)
-        return data
+        return data[1:]  # Skip header row
     except Exception as e:
         logger.error("Error fetching CSV data: %s", e)
         return []
@@ -29,7 +30,7 @@ def fetch_csv_data(url):
 # /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Handling /start from user: %s", update.effective_user.username)
-    context.user_data['current_point'] = 1  # Start at the first decision point
+    context.user_data['used_scenarios'] = set()
     context.user_data['score'] = 0
     context.user_data['time'] = 0
     context.user_data['prestige_stars'] = 0
@@ -50,43 +51,37 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
         return
 
-    current_point = context.user_data.get('current_point', 1)
-    if current_point >= len(decision_points):
+    # Randomly select a scenario that hasn't been used yet
+    unused_scenarios = [p for p in decision_points if p[0] not in context.user_data['used_scenarios']]
+    if not unused_scenarios:
         await summarize_game(update, context)
         return
 
-    try:
-        # Parse the current decision point
-        point = decision_points[current_point]
-        scenario = point[0]
-        option_1 = point[1]
-        option_2 = point[3]
+    point = random.choice(unused_scenarios)
+    context.user_data['used_scenarios'].add(point[0])  # Mark scenario as used
 
-        # Log the current decision point
-        logger.info("Current decision point: %s", point)
+    scenario = point[0]
+    option_1 = point[1]
+    option_2 = point[3]
 
-        # Save the current scenario
-        context.user_data['current_scenario'] = {
-            "scenario": scenario,
-            "option_1": option_1,
-            "time_1": int(point[2]),
-            "option_2": option_2,
-            "time_2": int(point[4]),
-            "prestige_star": point[5] if len(point) > 5 else None,
-        }
+    # Save the current scenario
+    context.user_data['current_scenario'] = {
+        "scenario": scenario,
+        "option_1": option_1,
+        "time_1": int(point[2]),
+        "option_2": option_2,
+        "time_2": int(point[4]),
+        "prestige_star": point[5] if len(point) > 5 else None,
+    }
 
-        message = (
-            f"🗺️ *{scenario}*\n\n"
-            f"1️⃣ {option_1}\n"
-            f"2️⃣ {option_2}\n\n"
-            f"⏩ Nhập số 1 hoặc 2 để chọn."
-        )
-        if update.message:
-            await update.message.reply_text(message, parse_mode="Markdown")
-    except IndexError as e:
-        logger.error("Error parsing decision point: %s", e)
-        if update.message:
-            await update.message.reply_text("❌ Lỗi khi đọc dữ liệu. Vui lòng thử lại sau.")
+    message = (
+        f"🗺️ *{scenario}*\n\n"
+        f"1️⃣ {option_1}\n"
+        f"2️⃣ {option_2}\n\n"
+        f"⏩ Nhập số 1 hoặc 2 để chọn."
+    )
+    if update.message:
+        await update.message.reply_text(message, parse_mode="Markdown")
 
 # Handle user choices
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -122,7 +117,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Fetch and present a question after the decision point
     await ask_question(update, context)
 
-# Fetch and present a question
+# Fetch and present a random question
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     questions = fetch_csv_data(QUESTIONS_URL)
     if not questions:
@@ -130,7 +125,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Không thể tải câu hỏi. Vui lòng thử lại sau.")
         return
 
-    question = questions.pop(0)  # Get the first question
+    question = random.choice(questions)  # Randomly select a question
     question_text = question[0]
     options = question[1:4]
     correct_answer = question[4]
