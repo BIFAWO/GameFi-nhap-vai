@@ -28,7 +28,7 @@ def fetch_csv_data(url):
 # /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Handling /start from user: %s", update.effective_user.username)
-    context.user_data['current_point'] = 0
+    context.user_data['current_point'] = 1  # Start at the first decision point
     context.user_data['score'] = 0
     context.user_data['time'] = 0
     context.user_data['prestige_stars'] = 0
@@ -50,7 +50,7 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
         return
 
-    current_point = context.user_data.get('current_point', 0)
+    current_point = context.user_data.get('current_point', 1)
     if current_point >= len(decision_points):
         await summarize_game(update, context)
         return
@@ -71,9 +71,10 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['current_scenario'] = {
             "scenario": scenario,
             "option_1": option_1,
-            "time_1": time_1,
+            "time_1": int(time_1),
             "option_2": option_2,
-            "time_2": time_2,
+            "time_2": int(time_2),
+            "prestige_star": point[5] if len(point) > 5 else None,
         }
 
         message = (
@@ -103,13 +104,19 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     time_key = 'time_1' if user_choice == '1' else 'time_2'
 
     chosen_option = current_scenario[choice_key]
-    time_cost = int(current_scenario[time_key])
+    time_cost = current_scenario[time_key]
+    prestige_star = current_scenario['prestige_star']
+
     context.user_data['time'] += time_cost
 
     response = (
         f"✅ Bạn đã chọn: {chosen_option}\n"
         f"⏱️ Thời gian thêm: {time_cost} giây.\n"
     )
+    if prestige_star and prestige_star == f"Option {user_choice}":
+        context.user_data['prestige_stars'] += 1
+        response += "🌟 Bạn nhận được một Ngôi sao danh giá!"
+
     if update.message:
         await update.message.reply_text(response)
 
@@ -126,7 +133,6 @@ async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     summary = (
         f"🎉 **Hành trình của bạn đã kết thúc!** 🎉\n\n"
         f"⏳ *Tổng thời gian:* **{time} giây**\n"
-        f"🏆 *Tổng điểm:* **{score} điểm**\n"
         f"🌟 *Ngôi sao danh giá:* **{prestige_stars}**\n\n"
         f"✨ **Cảm ơn bạn đã tham gia GameFi Nhập Vai!** ✨"
     )
