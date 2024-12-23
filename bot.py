@@ -51,15 +51,58 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await summarize_game(update, context)
         return
 
+    # Fetch the current decision point
     point = decision_points[current_point]
+    scenario = point[0]
+    option_1 = point[1]
+    time_1 = point[2]
+    option_2 = point[3]
+    time_2 = point[4]
+
+    # Save the current scenario
+    context.user_data['current_scenario'] = {
+        "scenario": scenario,
+        "option_1": option_1,
+        "time_1": time_1,
+        "option_2": option_2,
+        "time_2": time_2,
+    }
+
     message = (
-        f"🗺️ *{point[0]}*\n\n"
-        f"1️⃣ {point[1]} (+{point[2]} giây)\n"
-        f"2️⃣ {point[3]} (+{point[4]} giây)\n\n"
+        f"🗺️ *{scenario}*\n\n"
+        f"1️⃣ {option_1} (+{time_1} giây)\n"
+        f"2️⃣ {option_2} (+{time_2} giây)\n\n"
         f"⏩ Nhập số 1 hoặc 2 để chọn."
     )
     if update.message:
         await update.message.reply_text(message, parse_mode="Markdown")
+
+async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_choice = update.message.text
+    current_scenario = context.user_data.get('current_scenario', None)
+
+    if not current_scenario or user_choice not in ['1', '2']:
+        if update.message:
+            await update.message.reply_text("❌ Lựa chọn không hợp lệ. Vui lòng nhập 1 hoặc 2.")
+        return
+
+    choice_key = 'option_1' if user_choice == '1' else 'option_2'
+    time_key = 'time_1' if user_choice == '1' else 'time_2'
+
+    chosen_option = current_scenario[choice_key]
+    time_cost = int(current_scenario[time_key])
+    context.user_data['time'] += time_cost
+
+    response = (
+        f"✅ Bạn đã chọn: {chosen_option}\n"
+        f"⏱️ Thời gian thêm: {time_cost} giây.\n"
+    )
+    if update.message:
+        await update.message.reply_text(response)
+
+    # Proceed to the next point
+    context.user_data['current_point'] += 1
+    await play(update, context)
 
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     score = context.user_data.get('score', 0)
@@ -76,9 +119,6 @@ async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(summary, parse_mode="Markdown")
 
-async def log_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info("Update received: %s", update)
-
 def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
@@ -86,7 +126,7 @@ def main():
     logger.info("Bot is starting with token: %s", TOKEN)
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
-    application.add_handler(MessageHandler(TEXT | COMMAND, log_updates))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
 
     application.run_polling()
 
