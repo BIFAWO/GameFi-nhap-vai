@@ -13,9 +13,8 @@ logger = logging.getLogger(__name__)
 # Google Sheets URLs
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
 QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1913354117"
-PLAYER_STATS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1913354117"
 
-# Hàm tải dữ liệu từ Google Sheets
+# Fetch data from Google Sheets
 def fetch_csv_data(url):
     try:
         response = requests.get(url)
@@ -144,14 +143,16 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Tổng kết
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    score = context.user_data.get('score', 0)
     time = context.user_data.get('time', 0)
     prestige_stars = context.user_data.get('prestige_stars', 0)
 
     summary = (
         f"🎉 **Kết thúc!** 🎉\n\n"
         f"⏳ Thời gian: **{time} giây**\n"
-        f"🌟 Ngôi sao: **{prestige_stars}**\n\n"
-        f"✨ Cảm ơn đã tham gia!"
+        f"🏆 Điểm số: **{score}**\n"
+        f"🌟 Ngôi sao danh giá: **{prestige_stars}**\n\n"
+        f"✨ Cảm ơn bạn đã tham gia!"
     )
     await update.message.reply_text(summary, parse_mode="Markdown")
 
