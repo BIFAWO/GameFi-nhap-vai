@@ -12,17 +12,20 @@ logger = logging.getLogger(__name__)
 # Google Sheets URL (CSV Format)
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
 
-# Read data from Google Sheets (CSV)
+# Fetch data from Google Sheets
 def fetch_csv_data(url):
     try:
         response = requests.get(url)
         response.raise_for_status()
         decoded_content = response.content.decode("utf-8")
-        return list(csv.reader(decoded_content.splitlines(), delimiter=","))
+        data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
+        logger.info("Fetched data: %s", data)  # Log fetched data
+        return data
     except Exception as e:
         logger.error("Error fetching CSV data: %s", e)
         return []
 
+# /start command handler
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("Handling /start from user: %s", update.effective_user.username)
     context.user_data['current_point'] = 0
@@ -38,6 +41,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
+# /play command handler
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("User %s started playing", update.effective_user.username)
     decision_points = fetch_csv_data(DECISION_POINTS_URL)
@@ -51,32 +55,41 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await summarize_game(update, context)
         return
 
-    # Fetch the current decision point
-    point = decision_points[current_point]
-    scenario = point[0]
-    option_1 = point[1]
-    time_1 = point[2]
-    option_2 = point[3]
-    time_2 = point[4]
+    try:
+        # Parse the current decision point
+        point = decision_points[current_point]
+        scenario = point[0]
+        option_1 = point[1]
+        time_1 = point[2]
+        option_2 = point[3]
+        time_2 = point[4]
 
-    # Save the current scenario
-    context.user_data['current_scenario'] = {
-        "scenario": scenario,
-        "option_1": option_1,
-        "time_1": time_1,
-        "option_2": option_2,
-        "time_2": time_2,
-    }
+        # Log the current decision point
+        logger.info("Current decision point: %s", point)
 
-    message = (
-        f"🗺️ *{scenario}*\n\n"
-        f"1️⃣ {option_1} (+{time_1} giây)\n"
-        f"2️⃣ {option_2} (+{time_2} giây)\n\n"
-        f"⏩ Nhập số 1 hoặc 2 để chọn."
-    )
-    if update.message:
-        await update.message.reply_text(message, parse_mode="Markdown")
+        # Save the current scenario
+        context.user_data['current_scenario'] = {
+            "scenario": scenario,
+            "option_1": option_1,
+            "time_1": time_1,
+            "option_2": option_2,
+            "time_2": time_2,
+        }
 
+        message = (
+            f"🗺️ *{scenario}*\n\n"
+            f"1️⃣ {option_1} (+{time_1} giây)\n"
+            f"2️⃣ {option_2} (+{time_2} giây)\n\n"
+            f"⏩ Nhập số 1 hoặc 2 để chọn."
+        )
+        if update.message:
+            await update.message.reply_text(message, parse_mode="Markdown")
+    except IndexError as e:
+        logger.error("Error parsing decision point: %s", e)
+        if update.message:
+            await update.message.reply_text("❌ Lỗi khi đọc dữ liệu. Vui lòng thử lại sau.")
+
+# Handle user choices
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text
     current_scenario = context.user_data.get('current_scenario', None)
@@ -104,6 +117,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_point'] += 1
     await play(update, context)
 
+# Summarize the game
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     score = context.user_data.get('score', 0)
     time = context.user_data.get('time', 0)
@@ -119,6 +133,7 @@ async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         await update.message.reply_text(summary, parse_mode="Markdown")
 
+# Main function
 def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
