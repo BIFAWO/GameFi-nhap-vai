@@ -3,7 +3,7 @@ import requests
 import csv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes
-from telegram.ext.filters import TEXT, COMMAND
+from telegram.ext.filters import TEXT, Command
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -22,7 +22,6 @@ def fetch_csv_data(url):
 
 def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /start command."""
-    logger.info("Received /start command from user %s", update.effective_user.username)
     user = update.effective_user
     context.user_data['current_point'] = 0  # Reset current decision point
     context.user_data['score'] = 0  # Reset score
@@ -43,7 +42,6 @@ def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start the game by showing the first decision point."""
-    logger.info("User %s started playing", update.effective_user.username)
     decision_points = fetch_csv_data(DECISION_POINTS_URL)[1:]  # Skip header
     current_point = context.user_data.get('current_point', 0)
 
@@ -114,13 +112,11 @@ def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
 
-    logger.info("Bot is starting...")
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
-    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
+    application.add_handler(MessageHandler(TEXT & ~Command, handle_choice))
 
     application.run_polling()
 
 if __name__ == "__main__":
-    logger.info("Bot is initializing...")
     main()
