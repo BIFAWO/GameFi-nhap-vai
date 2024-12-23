@@ -1,9 +1,9 @@
 import logging
 import requests
 import csv
-from telegram import Update, constants
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
-from telegram import filters
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes
+from telegram.ext.filters import TEXT, Command
 
 # Set up logging
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
@@ -20,7 +20,7 @@ def fetch_csv_data(url):
     decoded_content = response.content.decode("utf-8")
     return list(csv.reader(decoded_content.splitlines(), delimiter=","))
 
-def start(update: Update, context: CallbackContext):
+def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /start command."""
     user = update.effective_user
     context.user_data['current_point'] = 0  # Reset current decision point
@@ -40,7 +40,7 @@ def start(update: Update, context: CallbackContext):
     )
     update.message.reply_text(welcome_message, parse_mode="Markdown")
 
-def play(update: Update, context: CallbackContext):
+def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start the game by showing the first decision point."""
     decision_points = fetch_csv_data(DECISION_POINTS_URL)[1:]  # Skip header
     current_point = context.user_data.get('current_point', 0)
@@ -66,7 +66,7 @@ def play(update: Update, context: CallbackContext):
     )
     update.message.reply_text(message, parse_mode="Markdown")
 
-def handle_choice(update: Update, context: CallbackContext):
+def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the player's choice at a decision point."""
     user_choice = update.message.text
     current_scenario = context.user_data.get('current_scenario', None)
@@ -92,7 +92,7 @@ def handle_choice(update: Update, context: CallbackContext):
     context.user_data['current_point'] += 1
     play(update, context)
 
-def summarize_game(update: Update, context: CallbackContext):
+def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Summarize the game results."""
     score = context.user_data.get('score', 0)
     time = context.user_data.get('time', 0)
@@ -110,15 +110,13 @@ def summarize_game(update: Update, context: CallbackContext):
 def main():
     """Main function to run the bot."""
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
-    updater = Updater(TOKEN)
+    application = Application.builder().token(TOKEN).build()
 
-    dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("play", play))
-    dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_choice))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("play", play))
+    application.add_handler(MessageHandler(TEXT & ~Command, handle_choice))
 
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
