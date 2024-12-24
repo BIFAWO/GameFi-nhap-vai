@@ -1,8 +1,9 @@
 import logging
 import requests
 import pandas as pd
+import io
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQueryHandler
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import random
 
 # Set up logging
@@ -17,18 +18,18 @@ QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJ
 # Initialize game state variables
 game_state = {}
 
-def fetch_data(url):
+async def fetch_data(url):
     """Fetch data from a Google Sheets URL."""
     try:
         response = requests.get(url)
         response.raise_for_status()
-        data = pd.read_csv(pd.compat.StringIO(response.text))
+        data = pd.read_csv(io.StringIO(response.text))
         return data
     except Exception as e:
         logger.error(f"Failed to fetch data: {e}")
         return None
 
-def start(update: Update, context: CallbackContext):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     chat_id = update.effective_chat.id
     game_state[chat_id] = {
@@ -43,29 +44,29 @@ def start(update: Update, context: CallbackContext):
         "Xin chào! Đây là bot GameFi của bạn.\n\n"
         "Hãy bắt đầu bằng cách sử dụng lệnh /play để chơi."
     )
-    update.message.reply_text(welcome_message)
+    await update.message.reply_text(welcome_message)
 
-def play(update: Update, context: CallbackContext):
+async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /play command to start or continue the game."""
     chat_id = update.effective_chat.id
     state = game_state.get(chat_id)
 
     if not state:
-        update.message.reply_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
+        await update.message.reply_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
         return
 
     if state['round'] > 10:
-        summarize_game(update, context)
+        await summarize_game(update, context)
         return
 
-    scenario_data = fetch_data(SCENARIO_URL)
+    scenario_data = await fetch_data(SCENARIO_URL)
     if scenario_data is None:
-        update.message.reply_text("Không thể tải dữ liệu kịch bản. Vui lòng thử lại sau.")
+        await update.message.reply_text("Không thể tải dữ liệu kịch bản. Vui lòng thử lại sau.")
         return
 
     unused_scenarios = scenario_data[~scenario_data['Scenario'].isin(state['used_scenarios'])]
     if unused_scenarios.empty:
-        update.message.reply_text("Hết kịch bản để chơi.")
+        await update.message.reply_text("Hết kịch bản để chơi.")
         return
 
     scenario = unused_scenarios.sample(1).iloc[0]
@@ -79,32 +80,32 @@ def play(update: Update, context: CallbackContext):
     ]
 
     reply_markup = InlineKeyboardMarkup.from_column(options)
-    update.message.reply_text(scenario['Scenario'], reply_markup=reply_markup)
+    await update.message.reply_text(scenario['Scenario'], reply_markup=reply_markup)
 
-def handle_choice(update: Update, context: CallbackContext):
+async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle user's choice for a scenario."""
     query = update.callback_query
-    query.answer()
+    await query.answer()
     chat_id = query.message.chat.id
     state = game_state.get(chat_id)
 
     if not state:
-        query.edit_message_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
+        await query.edit_message_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
         return
 
     # Proceed to the question phase
-    ask_question(query, state)
+    await ask_question(query, state)
 
-def ask_question(query, state):
+async def ask_question(query, state):
     """Ask a random question that hasn't been used yet."""
-    question_data = fetch_data(QUESTIONS_URL)
+    question_data = await fetch_data(QUESTIONS_URL)
     if question_data is None:
-        query.edit_message_text("Không thể tải dữ liệu câu hỏi. Vui lòng thử lại sau.")
+        await query.edit_message_text("Không thể tải dữ liệu câu hỏi. Vui lòng thử lại sau.")
         return
 
     unused_questions = question_data[~question_data['Question'].isin(state['used_questions'])]
     if unused_questions.empty:
-        query.edit_message_text("Hết câu hỏi để chơi.")
+        await query.edit_message_text("Hết câu hỏi để chơi.")
         return
 
     question = unused_questions.sample(1).iloc[0]
@@ -116,40 +117,40 @@ def ask_question(query, state):
     ]
 
     reply_markup = InlineKeyboardMarkup.from_column(options)
-    query.edit_message_text(question['Question'], reply_markup=reply_markup)
+    await query.edit_message_text(question['Question'], reply_markup=reply_markup)
 
-def handle_answer(update: Update, context: CallbackContext):
+async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle user's answer to a question."""
     query = update.callback_query
-    query.answer()
+    await query.answer()
     chat_id = query.message.chat.id
     state = game_state.get(chat_id)
 
     if not state:
-        query.edit_message_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
+        await query.edit_message_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
         return
 
     answer_correct = query.data.endswith("_0")  # Assume option_0 is correct
     if answer_correct:
         state['score'] += 10
-        query.edit_message_text("Chính xác! Bạn được cộng 10 điểm.")
+        await query.edit_message_text("Chính xác! Bạn được cộng 10 điểm.")
     else:
-        query.edit_message_text("Sai rồi! Hãy thử câu hỏi tiếp theo.")
+        await query.edit_message_text("Sai rồi! Hãy thử câu hỏi tiếp theo.")
 
     state['round'] += 1
 
     if state['round'] > 10:
-        summarize_game(update, context)
+        await summarize_game(update, context)
     else:
-        play(update, context)
+        await play(update, context)
 
-def summarize_game(update: Update, context: CallbackContext):
+async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Summarize the game and send the results to the user."""
     chat_id = update.effective_chat.id
     state = game_state.get(chat_id)
 
     if not state:
-        update.message.reply_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
+        await update.message.reply_text("Vui lòng sử dụng lệnh /start trước khi chơi.")
         return
 
     summary = (
@@ -158,23 +159,22 @@ def summarize_game(update: Update, context: CallbackContext):
         f"Tổng thời gian: {state['time']} phút\n"
         f"Ngôi sao danh giá: {state['prestige_stars']}\n"
     )
-    update.message.reply_text(summary)
+    await update.message.reply_text(summary)
     del game_state[chat_id]
 
-def main():
+async def main():
     """Start the bot."""
-    updater = Updater(TELEGRAM_BOT_TOKEN)
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # Register handlers
-    dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("play", play))
-    dispatcher.add_handler(CallbackQueryHandler(handle_choice, pattern="^scenario_"))
-    dispatcher.add_handler(CallbackQueryHandler(handle_answer, pattern="^question_"))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("play", play))
+    application.add_handler(CallbackQueryHandler(handle_choice, pattern="^scenario_"))
+    application.add_handler(CallbackQueryHandler(handle_answer, pattern="^question_"))
 
     # Start the bot
-    updater.start_polling()
-    updater.idle()
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
