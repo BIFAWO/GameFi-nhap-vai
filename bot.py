@@ -77,8 +77,9 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "prestige_star": point[5] if len(point) > 5 else None,
     }
 
+    round_number = context.user_data['round'] // 2 + 1
     message = (
-        f"🗺️ *{point[0]}*\n\n"
+        f"🗺️ *Câu {round_number} - Scenario:* {point[0]}\n\n"
         f"1️⃣ {point[1]}\n"
         f"2️⃣ {point[3]}\n\n"
         f"⏩ Nhập số 1 hoặc 2 để chọn."
@@ -136,8 +137,9 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "start_time": time.time(),
     }
 
+    round_number = context.user_data['round'] // 2 + 1
     message = (
-        f"🤔 *Câu hỏi:* {question[0]}\n\n"
+        f"🤔 *Câu {round_number} - Question:* {question[0]}\n\n"
         f"1️⃣ {question[1]}\n"
         f"2️⃣ {question[2]}\n"
         f"3️⃣ {question[3]}\n\n"
@@ -157,11 +159,13 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer_time = int(end_time - current_question['start_time'])
     context.user_data['time'] += answer_time
 
+    chosen_option = current_question['options'][int(user_choice) - 1]
     correct_answer = current_question['correct_answer']
+
     if user_choice == correct_answer:
         context.user_data['score'] += current_question['score']
         response = (
-            f"✅ Bạn đã trả lời đúng!\n"
+            f"✅ Bạn đã chọn: {chosen_option}\n"
             f"🏆 Điểm cộng: {current_question['score']}\n"
             f"⏱️ Thời gian trả lời: {answer_time} giây.\n"
             f"🎯 Tổng điểm: {context.user_data['score']}\n"
@@ -169,7 +173,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         response = (
-            f"❌ Bạn đã trả lời sai.\n"
+            f"❌ Bạn đã chọn: {chosen_option}\n"
             f"⏱️ Thời gian trả lời: {answer_time} giây.\n"
             f"🎯 Tổng điểm: {context.user_data['score']}\n"
             f"⏳ Tổng thời gian hiện tại: {context.user_data['time']} giây."
@@ -200,7 +204,6 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
-    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer))
 
     application.run_polling()
