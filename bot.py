@@ -132,7 +132,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_question'] = {
         "question_text": question[0],
         "options": question[1:4],
-        "correct_answer": str(question[4]),  # Ensure correct_answer is a string
+        "correct_answer": str(question[4]).strip(),  # Ensure correct_answer is a string and stripped
         "score": 10,  # Fix score to 10 points per correct answer
         "start_time": time.time(),
     }
@@ -148,7 +148,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown")
 
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_choice = update.message.text
+    user_choice = update.message.text.strip()
     current_question = context.user_data.get('current_question', None)
 
     if not current_question or user_choice not in ['1', '2', '3']:
