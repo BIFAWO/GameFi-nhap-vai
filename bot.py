@@ -161,7 +161,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         chosen_option = current_question['options'][int(user_choice) - 1]
-        correct_answer = current_question['correct_answer']
+        correct_answer = str(current_question['correct_answer']).strip()
     except (IndexError, ValueError):
         await update.message.reply_text("❌ Đã xảy ra lỗi trong quá trình xử lý câu trả lời. Vui lòng thử lại.")
         return
