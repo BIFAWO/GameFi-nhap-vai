@@ -49,7 +49,6 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await summarize_game(update, context)
         return
 
-    # Alternate between scenario and question
     if context.user_data['round'] % 2 == 0:
         await play_scenario(update, context)
     else:
@@ -77,7 +76,7 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "prestige_star": point[5] if len(point) > 5 else None,
     }
 
-    round_number = context.user_data['round'] // 2 + 1
+    round_number = (context.user_data['round'] // 2) + 1
     message = (
         f"🗺️ *Câu {round_number} - Scenario:* {point[0]}\n\n"
         f"1️⃣ {point[1]}\n"
@@ -132,12 +131,12 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_question'] = {
         "question_text": question[0],
         "options": question[1:4],
-        "correct_answer": str(question[4]).strip(),  # Ensure correct_answer is a string and stripped
+        "correct_answer": str(question[4]).strip(),
         "score": 10,  # Fix score to 10 points per correct answer
         "start_time": time.time(),
     }
 
-    round_number = context.user_data['round'] // 2 + 1
+    round_number = (context.user_data['round'] // 2) + 1
     message = (
         f"🤔 *Câu {round_number} - Question:* {question[0]}\n\n"
         f"1️⃣ {question[1]}\n"
