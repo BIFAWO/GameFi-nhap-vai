@@ -52,19 +52,16 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Không thể tải danh sách kịch bản. Vui lòng thử lại sau.")
         return
 
-    # Lọc ra các kịch bản chưa được sử dụng
     unused_scenarios = [s for s in scenarios if s[0] not in context.user_data['used_scenarios']]
     if not unused_scenarios:
         await update.message.reply_text("⚠️ Không còn kịch bản nào mới để chơi.")
         return
 
-    # Chọn ngẫu nhiên một kịch bản chưa được sử dụng
     scenario = random.choice(unused_scenarios)
     context.user_data['used_scenarios'].add(scenario[0])
     context.user_data['current_scenario'] = scenario
     context.user_data['scenario_count'] += 1
 
-    # Gửi nội dung kịch bản
     await update.message.reply_text(
         f"🗺️ *Kỹ năng xử lý tình huống {context.user_data['scenario_count']}*\n\n"
         f"{scenario[0]}\n\n"
@@ -112,7 +109,6 @@ async def start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data['question_count'] < 10:
         await play_question(update, context)
     else:
-        # Hoàn thành Game 2
         await update.message.reply_text(
             f"🏁 **Bạn đã hoàn thành Game 2: Khám phá sức mạnh trí tuệ của bạn!**\n"
             f"⭐ Tổng Game Star: {context.user_data['total_stars']}\n"
@@ -128,19 +124,16 @@ async def play_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Không thể tải danh sách câu hỏi. Vui lòng thử lại sau.")
         return
 
-    # Lọc ra các câu hỏi chưa được sử dụng
     unused_questions = [q for q in questions if q[0] not in context.user_data['used_questions']]
     if not unused_questions:
         await update.message.reply_text("⚠️ Không còn câu hỏi mới để chơi.")
         return
 
-    # Chọn ngẫu nhiên một câu hỏi
     question = random.choice(unused_questions)
     context.user_data['used_questions'].add(question[0])
     context.user_data['current_question'] = question
     context.user_data['question_count'] += 1
 
-    # Gửi câu hỏi
     await update.message.reply_text(
         f"🤔 *Khám phá sức mạnh trí tuệ của bạn - Câu {context.user_data['question_count']}*\n\n"
         f"{question[0]}\n\n"
