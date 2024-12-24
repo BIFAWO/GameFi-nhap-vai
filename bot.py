@@ -90,7 +90,6 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Vui lòng nhập 1 hoặc 2.")
         return
 
-    choice = "option_1" if user_choice == '1' else "option_2"
     time_cost = int(current_scenario[2]) if user_choice == '1' else int(current_scenario[4])
     context.user_data['time'] += time_cost
 
@@ -127,7 +126,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"1️⃣ {question[1]}\n"
         f"2️⃣ {question[2]}\n"
         f"3️⃣ {question[3]}\n\n"
-        "⏩ Nhập 1, 2 hoặc 3 để trả lời.",
+        "⏩ Nhập 1, 2, hoặc 3 để trả lời.",
         parse_mode="Markdown"
     )
 
@@ -140,16 +139,19 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Vui lòng nhập 1, 2 hoặc 3.")
         return
 
-    correct_answer = current_question['correct']
+    correct_answer = current_question['correct'].strip()
+    chosen_answer = current_question['options'][int(user_choice) - 1].strip()
+
     if user_choice == correct_answer:
         context.user_data['score'] += 10
         await update.message.reply_text(
-            f"✅ Đúng rồi! Bạn đã trả lời đúng câu hỏi.\n"
+            f"✅ Đúng rồi! Bạn đã chọn: {chosen_answer}.\n"
             f"🎯 Điểm hiện tại: {context.user_data['score']} điểm."
         )
     else:
         await update.message.reply_text(
-            f"❌ Sai rồi! Đáp án đúng là: {correct_answer}.\n"
+            f"❌ Sai rồi! Bạn đã chọn: {chosen_answer}.\n"
+            f"Đáp án đúng là: {correct_answer}.\n"
             f"🎯 Điểm hiện tại: {context.user_data['score']} điểm."
         )
     await play(update, context)
