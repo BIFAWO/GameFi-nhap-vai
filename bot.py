@@ -45,13 +45,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # /play command
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data['round'] >= 10:
+        await summarize_game(update, context)
+        return
+
     decision_points = fetch_csv_data(DECISION_POINTS_URL, "Decision Points")
     if not decision_points:
         await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
-        return
-
-    if context.user_data['round'] >= 10:
-        await summarize_game(update, context)
         return
 
     unused_scenarios = [p for p in decision_points if p[0] not in context.user_data['used_scenarios']]
@@ -101,7 +101,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response = (
         f"✅ Bạn đã chọn: {chosen_option}\n"
         f"⏱️ Thời gian thêm: {time_cost} giây.\n"
-        f"🌟 Tổng Ngôi sao danh giá: {context.user_data['prestige_stars']}.\n\n"
+        f"🌟 Tổng Ngôi sao danh giá: {context.user_data['prestige_stars']}\n"
         f"🎯 Tổng thời gian hiện tại: {context.user_data['time']} giây."
     )
     await update.message.reply_text(response)
