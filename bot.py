@@ -175,15 +175,17 @@ async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_T
     correct_answer = current_question[4].strip()
     if user_choice == correct_answer:
         context.user_data['total_score'] += 10  # Thêm điểm nếu đúng
-        await update.message.reply_text(
+        response = (
             f"✅ Đúng rồi! Bạn đã trả lời đúng.\n"
             f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
         )
     else:
-        await update.message.reply_text(
+        response = (
             f"❌ Sai rồi! Đáp án đúng là: {correct_answer}.\n"
             f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
         )
+
+    await update.message.reply_text(response)
 
     # Chuyển sang câu hỏi tiếp theo
     await start_quiz(update, context)
