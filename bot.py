@@ -159,7 +159,7 @@ async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Main function
 def main():
-    TOKEN = "YOUR_BOT_TOKEN"
+    TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
