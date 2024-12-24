@@ -18,7 +18,6 @@ QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJ
 # Fetch data from Google Sheets
 def fetch_csv_data(url):
     try:
-        logger.info(f"Fetching data from {url}")
         response = requests.get(url)
         response.raise_for_status()
         decoded_content = response.content.decode("utf-8")
@@ -35,15 +34,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['used_questions'] = set()
     context.user_data['score'] = 0
     context.user_data['time'] = 0
-    context.user_data['prestige_stars'] = 0
     context.user_data['scenario_round'] = 0
     context.user_data['question_round'] = 0
 
-    welcome_message = (
+    await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
-        "⏩ Gõ /play để bắt đầu hành trình của bạn!"
+        "⏩ Gõ /play để bắt đầu hành trình của bạn!",
+        parse_mode="Markdown"
     )
-    await update.message.reply_text(welcome_message, parse_mode="Markdown")
 
 # /play command
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -57,13 +55,14 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await ask_question(update, context)
 
+# Handle scenario
 async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    decision_points = fetch_csv_data(DECISION_POINTS_URL)
-    if not decision_points:
-        await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
+    scenarios = fetch_csv_data(DECISION_POINTS_URL)
+    if not scenarios:
+        await update.message.reply_text("❌ Không thể tải dữ liệu kịch bản. Vui lòng thử lại sau.")
         return
 
-    unused_scenarios = [p for p in decision_points if p[0] not in context.user_data['used_scenarios']]
+    unused_scenarios = [s for s in scenarios if s[0] not in context.user_data['used_scenarios']]
     if not unused_scenarios:
         await summarize_game(update, context)
         return
@@ -73,15 +72,16 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_scenario'] = scenario
     context.user_data['scenario_round'] += 1
 
-    message = (
-        f"🗺️ *Scenario {context.user_data['scenario_round']}*\n\n"
+    await update.message.reply_text(
+        f"🗺️ *Câu {context.user_data['scenario_round']} - Kịch bản:*\n\n"
         f"{scenario[0]}\n\n"
         f"1️⃣ {scenario[1]}\n"
         f"2️⃣ {scenario[3]}\n\n"
-        "⏩ Nhập 1 hoặc 2 để chọn."
+        "⏩ Nhập 1 hoặc 2 để chọn.",
+        parse_mode="Markdown"
     )
-    await update.message.reply_text(message, parse_mode="Markdown")
 
+# Handle choice
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text.strip()
     current_scenario = context.user_data.get('current_scenario')
@@ -90,16 +90,17 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Vui lòng nhập 1 hoặc 2.")
         return
 
+    choice = "option_1" if user_choice == '1' else "option_2"
     time_cost = int(current_scenario[2]) if user_choice == '1' else int(current_scenario[4])
     context.user_data['time'] += time_cost
 
-    response = (
+    await update.message.reply_text(
         f"✅ Bạn đã chọn: {current_scenario[1] if user_choice == '1' else current_scenario[3]}\n"
-        f"⏱️ Thời gian thêm: {time_cost} giây."
+        f"⏱️ Thời gian cộng thêm: {time_cost} giây."
     )
-    await update.message.reply_text(response)
     await play(update, context)
 
+# Handle question
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     questions = fetch_csv_data(QUESTIONS_URL)
     if not questions:
@@ -116,20 +117,21 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_question'] = {
         "question": question[0],
         "options": question[1:4],
-        "correct": question[4],
+        "correct": question[4]
     }
     context.user_data['question_round'] += 1
 
-    message = (
-        f"🤔 *Câu hỏi {context.user_data['question_round']}*\n\n"
+    await update.message.reply_text(
+        f"🤔 *Câu {context.user_data['question_round']} - Câu hỏi:*\n\n"
         f"{question[0]}\n\n"
         f"1️⃣ {question[1]}\n"
         f"2️⃣ {question[2]}\n"
         f"3️⃣ {question[3]}\n\n"
-        "⏩ Nhập 1, 2, hoặc 3 để trả lời."
+        "⏩ Nhập 1, 2 hoặc 3 để trả lời.",
+        parse_mode="Markdown"
     )
-    await update.message.reply_text(message, parse_mode="Markdown")
 
+# Handle answer
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text.strip()
     current_question = context.user_data.get('current_question')
@@ -138,24 +140,29 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Vui lòng nhập 1, 2 hoặc 3.")
         return
 
-    is_correct = user_choice == current_question['correct']
-    context.user_data['score'] += 10 if is_correct else 0
-
-    response = (
-        f"{'✅ Đúng!' if is_correct else '❌ Sai!'}\n"
-        f"🎯 Điểm số: {context.user_data['score']}"
-    )
-    await update.message.reply_text(response)
+    correct_answer = current_question['correct']
+    if user_choice == correct_answer:
+        context.user_data['score'] += 10
+        await update.message.reply_text(
+            f"✅ Đúng rồi! Bạn đã trả lời đúng câu hỏi.\n"
+            f"🎯 Điểm hiện tại: {context.user_data['score']} điểm."
+        )
+    else:
+        await update.message.reply_text(
+            f"❌ Sai rồi! Đáp án đúng là: {correct_answer}.\n"
+            f"🎯 Điểm hiện tại: {context.user_data['score']} điểm."
+        )
     await play(update, context)
 
+# Summarize game
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    summary = (
+    await update.message.reply_text(
         f"🎉 **Kết thúc trò chơi!** 🎉\n\n"
         f"⏱️ Tổng thời gian: {context.user_data['time']} giây\n"
         f"🎯 Điểm số: {context.user_data['score']}\n"
-        "✨ Cảm ơn bạn đã tham gia!"
+        "✨ Cảm ơn bạn đã tham gia!",
+        parse_mode="Markdown"
     )
-    await update.message.reply_text(summary, parse_mode="Markdown")
 
 # Main function
 def main():
