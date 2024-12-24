@@ -2,6 +2,7 @@ import logging
 import requests
 import csv
 import random
+import time
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes
 from telegram.ext.filters import TEXT, COMMAND
@@ -126,6 +127,7 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "options": question[1:4],
         "correct_answer": question[4],
         "score": int(question[5]),
+        "start_time": time.time(),
     }
 
     message = (
@@ -136,6 +138,42 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⏩ Nhập số 1, 2 hoặc 3 để trả lời."
     )
     await update.message.reply_text(message, parse_mode="Markdown")
+
+# Handle question answers
+async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_choice = update.message.text
+    current_question = context.user_data.get('current_question', None)
+
+    if not current_question or user_choice not in ['1', '2', '3']:
+        await update.message.reply_text("❌ Vui lòng nhập 1, 2 hoặc 3.")
+        return
+
+    end_time = time.time()
+    answer_time = int(end_time - current_question['start_time'])
+    context.user_data['time'] += answer_time
+
+    correct_answer = current_question['correct_answer']
+    if user_choice == correct_answer:
+        context.user_data['score'] += current_question['score']
+        response = (
+            f"✅ Bạn đã trả lời đúng!\n"
+            f"🏆 Điểm cộng: {current_question['score']}\n"
+            f"⏱️ Thời gian trả lời: {answer_time} giây.\n"
+            f"🎯 Tổng điểm: {context.user_data['score']}\n"
+            f"⏳ Tổng thời gian hiện tại: {context.user_data['time']} giây."
+        )
+    else:
+        response = (
+            f"❌ Bạn đã trả lời sai.\n"
+            f"⏱️ Thời gian trả lời: {answer_time} giây.\n"
+            f"🎯 Tổng điểm: {context.user_data['score']}\n"
+            f"⏳ Tổng thời gian hiện tại: {context.user_data['time']} giây."
+        )
+
+    await update.message.reply_text(response)
+    context.user_data['round'] += 1
+
+    await play(update, context)
 
 # Summarize game
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -160,6 +198,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer))
 
     application.run_polling()
 
