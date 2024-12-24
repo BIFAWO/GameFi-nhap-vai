@@ -204,6 +204,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer))
 
     application.run_polling()
