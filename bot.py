@@ -67,12 +67,12 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_scenario'] = scenario
     context.user_data['scenario_count'] += 1
 
-    # Gửi kịch bản cho người chơi
+    # Gửi kịch bản cho người chơi (ẩn điểm số)
     await update.message.reply_text(
         f"🗺️ *Kịch bản {context.user_data['scenario_count']}*\n\n"
         f"{scenario[0]}\n\n"
-        f"1️⃣ {scenario[1]} (+{scenario[2]} Game Star)\n"
-        f"2️⃣ {scenario[3]} (+{scenario[4]} Game Star)\n\n"
+        f"1️⃣ {scenario[1]}\n"
+        f"2️⃣ {scenario[3]}\n\n"
         "⏩ Nhập 1 hoặc 2 để chọn.",
         parse_mode="Markdown"
     )
