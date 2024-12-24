@@ -49,6 +49,13 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await summarize_game(update, context)
         return
 
+    # Alternate between scenario and question
+    if context.user_data['round'] % 2 == 0:
+        await play_scenario(update, context)
+    else:
+        await ask_question(update, context)
+
+async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     decision_points = fetch_csv_data(DECISION_POINTS_URL, "Decision Points")
     if not decision_points:
         await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
@@ -78,7 +85,6 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(message, parse_mode="Markdown")
 
-# Handle scenario choices
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text
     current_scenario = context.user_data.get('current_scenario', None)
@@ -106,9 +112,9 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(response)
 
-    await ask_question(update, context)
+    context.user_data['round'] += 1
+    await play(update, context)
 
-# Ask a question
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     questions = fetch_csv_data(QUESTIONS_URL, "Questions")
     if not questions:
@@ -139,7 +145,6 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(message, parse_mode="Markdown")
 
-# Handle question answers
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text
     current_question = context.user_data.get('current_question', None)
@@ -172,10 +177,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(response)
     context.user_data['round'] += 1
-
     await play(update, context)
 
-# Summarize game
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     score = context.user_data.get('score', 0)
     time = context.user_data.get('time', 0)
