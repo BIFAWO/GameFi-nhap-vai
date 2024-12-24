@@ -16,32 +16,36 @@ QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJ
 
 # --- PHẦN 1: KHỞI TẠO ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Khởi tạo hệ thống và thông báo bắt đầu"""
     context.user_data.clear()
     context.user_data['used_scenarios'] = set()
     context.user_data['used_questions'] = set()
     context.user_data['scenario_count'] = 0
     context.user_data['question_count'] = 0
-    context.user_data['total_stars'] = 0  # Tổng số Game Star từ Game 1
-    context.user_data['total_score'] = 0  # Tổng điểm từ Game 2
+    context.user_data['total_stars'] = 0  # Game 1: Kỹ năng xử lý tình huống
+    context.user_data['total_score'] = 0  # Game 2: Khám phá sức mạnh trí tuệ của bạn
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
-        "⏩ Gõ /play để bắt đầu chơi!",
+        "⏩ Gõ /play để bắt đầu chơi Game 1: Kỹ năng xử lý tình huống.",
         parse_mode="Markdown"
     )
 
 # --- PHẦN 2: GAME 1 - KỸ NĂNG XỬ LÝ TÌNH HUỐNG ---
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Bắt đầu Game 1"""
     if context.user_data['scenario_count'] < 10:
         await play_scenario(update, context)
     else:
         await update.message.reply_text(
             "🎯 **Bạn đã hoàn thành Game 1: Kỹ năng xử lý tình huống!**\n\n"
-            "✨ Chuyển sang Game 2: Khám phá sức mạnh trí tuệ của bạn. Gõ /quiz để bắt đầu!",
+            "✨ Chuyển sang Game 2: Khám phá sức mạnh trí tuệ của bạn.\n"
+            "⏩ Gõ /quiz để bắt đầu Game 2.",
             parse_mode="Markdown"
         )
 
 async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xử lý từng kịch bản trong Game 1"""
     scenarios = fetch_csv_data(DECISION_POINTS_URL)
     if not scenarios:
         await update.message.reply_text("❌ Không thể tải danh sách kịch bản. Vui lòng thử lại sau.")
@@ -67,6 +71,7 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_choice_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xử lý lựa chọn trong Game 1"""
     user_choice = update.message.text.strip()
     current_scenario = context.user_data.get('current_scenario')
 
@@ -91,18 +96,20 @@ async def handle_choice_scenario(update: Update, context: ContextTypes.DEFAULT_T
         f"✅ Bạn đã chọn: {chosen_option}.\n"
         f"⭐ Bạn nhận được: {stars_earned} Game Star.\n"
         f"🌟 Tổng Game Star hiện tại: {context.user_data['total_stars']}.\n\n"
-        "⏩ Chuyển sang tình huống tiếp theo..."
+        "⏩ Chuyển sang tình huống tiếp theo...",
+        parse_mode="Markdown"
     )
 
     await play(update, context)
 
 # --- PHẦN 3: GAME 2 - KHÁM PHÁ SỨC MẠNH TRÍ TUỆ CỦA BẠN ---
 async def start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Bắt đầu Game 2"""
     if context.user_data['question_count'] < 10:
         await play_question(update, context)
     else:
         await update.message.reply_text(
-            f"🏁 Bạn đã hoàn thành Game 2: Khám phá sức mạnh trí tuệ của bạn!\n"
+            f"🏁 **Bạn đã hoàn thành Game 2: Khám phá sức mạnh trí tuệ của bạn!**\n"
             f"⭐ Tổng Game Star: {context.user_data['total_stars']}\n"
             f"🧠 Tổng điểm: {context.user_data['total_score']} điểm.\n"
             "✨ Cảm ơn bạn đã tham gia!",
@@ -110,6 +117,7 @@ async def start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def play_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xử lý từng câu hỏi trong Game 2"""
     questions = fetch_csv_data(QUESTIONS_URL)
     if not questions:
         await update.message.reply_text("❌ Không thể tải danh sách câu hỏi. Vui lòng thử lại sau.")
@@ -136,6 +144,7 @@ async def play_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Xử lý câu trả lời trong Game 2"""
     user_choice = update.message.text.strip()
     current_question = context.user_data.get('current_question')
 
