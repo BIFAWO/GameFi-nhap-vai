@@ -35,7 +35,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['score'] = 0
     context.user_data['time'] = 0
     context.user_data['prestige_stars'] = 0
-    context.user_data['round'] = 0
+    context.user_data['scenario_round'] = 0
+    context.user_data['question_round'] = 0
 
     welcome_message = (
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
@@ -45,11 +46,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # /play command
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data['round'] >= 10:
+    if context.user_data['scenario_round'] + context.user_data['question_round'] >= 10:
         await summarize_game(update, context)
         return
 
-    if context.user_data['round'] % 2 == 0:
+    if context.user_data['scenario_round'] <= context.user_data['question_round']:
         await play_scenario(update, context)
     else:
         await ask_question(update, context)
@@ -76,7 +77,8 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "prestige_star": point[5] if len(point) > 5 else None,
     }
 
-    round_number = (context.user_data['round'] // 2) + 1
+    context.user_data['scenario_round'] += 1
+    round_number = context.user_data['scenario_round']
     message = (
         f"🗺️ *Câu {round_number} - Scenario:* {point[0]}\n\n"
         f"1️⃣ {point[1]}\n"
@@ -112,8 +114,6 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🎯 Tổng thời gian hiện tại: {context.user_data['time']} giây."
     )
     await update.message.reply_text(response)
-
-    context.user_data['round'] += 1
     await play(update, context)
 
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -137,7 +137,8 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "start_time": time.time(),
     }
 
-    round_number = (context.user_data['round'] // 2) + 1
+    context.user_data['question_round'] += 1
+    round_number = context.user_data['question_round']
     message = (
         f"🤔 *Câu {round_number} - Question:* {question[0]}\n\n"
         f"1️⃣ {question[1]}\n"
@@ -184,7 +185,6 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     await update.message.reply_text(response)
-    context.user_data['round'] += 1
     await play(update, context)
 
 async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
