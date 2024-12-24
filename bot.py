@@ -137,6 +137,31 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(message, parse_mode="Markdown")
 
----
+# Summarize game
+async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    score = context.user_data.get('score', 0)
+    time = context.user_data.get('time', 0)
+    prestige_stars = context.user_data.get('prestige_stars', 0)
 
-Thử lại mã này và tôi sẽ điều chỉnh nếu cần thiết! 🚀
+    summary = (
+        f"🎉 **Kết thúc trò chơi!** 🎉\n\n"
+        f"⏳ Thời gian: **{time} giây**\n"
+        f"🏆 Điểm số: **{score}**\n"
+        f"🌟 Ngôi sao danh giá: **{prestige_stars}**\n\n"
+        f"✨ Cảm ơn bạn đã tham gia!"
+    )
+    await update.message.reply_text(summary, parse_mode="Markdown")
+
+# Run bot
+def main():
+    TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
+    application = Application.builder().token(TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("play", play))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
+
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
