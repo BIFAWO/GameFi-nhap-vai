@@ -80,7 +80,7 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_choice_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text.strip()
     current_scenario = context.user_data.get('current_scenario')
 
@@ -147,7 +147,7 @@ async def play_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text.strip()
     current_question = context.user_data.get('current_question')
 
@@ -181,8 +181,8 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
-    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
-    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice_scenario))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer_question))
 
     application.run_polling()
 
