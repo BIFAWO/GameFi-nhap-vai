@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Google Sheets URLs
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
-QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1301413371"  # Correct GID for Questions
+QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1301413371"
 
 # Fetch data from Google Sheets
 def fetch_csv_data(url, tab_name):
@@ -178,7 +178,7 @@ async def summarize_game(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Run bot
 def main():
-    TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
+    TOKEN = "YOUR_BOT_TOKEN_HERE"
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
