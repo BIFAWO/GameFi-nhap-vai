@@ -108,6 +108,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Bạn đã chọn: {chosen_option}\n"
         f"⏱️ Thời gian thêm: {time_cost} giây.\n"
         f"🌟 Tổng Ngôi sao danh giá: {context.user_data['prestige_stars']}\n"
+        f"🎯 Tổng điểm hiện tại: {context.user_data['score']}\n"
         f"🎯 Tổng thời gian hiện tại: {context.user_data['time']} giây."
     )
     await update.message.reply_text(response)
