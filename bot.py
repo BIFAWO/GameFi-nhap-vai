@@ -34,11 +34,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['scenario_count'] = 0
     context.user_data['question_count'] = 0
     context.user_data['total_stars'] = 0  # Tổng số Game Star từ kịch bản
-    context.user_data['total_score'] = 0  # Tổng điểm từ câu hỏi
+    context.user_data['total_score'] = 0  # Tổng điểm từ câu hỏi trí tuệ
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
-        "⏩ Gõ /play để bắt đầu chơi với kỹ năng xử lý tình huống!",
+        "⏩ Gõ /play để bắt đầu với kỹ năng xử lý tình huống!",
         parse_mode="Markdown"
     )
 
