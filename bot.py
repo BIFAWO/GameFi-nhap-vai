@@ -87,7 +87,7 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown")
 
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_choice = update.message.text
+    user_choice = update.message.text.strip()
     current_scenario = context.user_data.get('current_scenario', None)
 
     if not current_scenario or user_choice not in ['1', '2']:
