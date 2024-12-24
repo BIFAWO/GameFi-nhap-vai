@@ -18,12 +18,13 @@ QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJ
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Khởi tạo hệ thống và thông báo bắt đầu"""
     context.user_data.clear()
+    context.user_data['current_game'] = "game_1"  # Trạng thái hiện tại
     context.user_data['used_scenarios'] = set()
     context.user_data['used_questions'] = set()
     context.user_data['scenario_count'] = 0
     context.user_data['question_count'] = 0
-    context.user_data['total_stars'] = 0  # Tổng điểm Game 1
-    context.user_data['total_score'] = 0  # Tổng điểm Game 2
+    context.user_data['total_stars'] = 0  # Điểm Game 1
+    context.user_data['total_score'] = 0  # Điểm Game 2
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
@@ -34,10 +35,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- PHẦN 2: GAME 1 - KỸ NĂNG XỬ LÝ TÌNH HUỐNG ---
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Bắt đầu Game 1"""
+    if context.user_data['current_game'] != "game_1":
+        await update.message.reply_text("❌ Game hiện tại không phải là Game 1. Gõ /start để bắt đầu lại.")
+        return
+
     if context.user_data['scenario_count'] < 10:
         await play_scenario(update, context)
     else:
-        # Chuyển sang Game 2 khi hoàn thành Game 1
+        # Hoàn thành Game 1, chuyển sang Game 2
+        context.user_data['current_game'] = "game_2"
         await update.message.reply_text(
             "🎯 **Bạn đã hoàn thành Game 1: Kỹ năng xử lý tình huống!**\n\n"
             "✨ Chuyển sang Game 2: Khám phá sức mạnh trí tuệ của bạn!",
@@ -73,6 +79,9 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_choice_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Xử lý lựa chọn trong Game 1"""
+    if context.user_data['current_game'] != "game_1":
+        return
+
     user_choice = update.message.text.strip()
     current_scenario = context.user_data.get('current_scenario')
 
@@ -106,6 +115,9 @@ async def handle_choice_scenario(update: Update, context: ContextTypes.DEFAULT_T
 # --- PHẦN 3: GAME 2 - KHÁM PHÁ SỨC MẠNH TRÍ TUỆ ---
 async def start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Bắt đầu Game 2"""
+    if context.user_data['current_game'] != "game_2":
+        return
+
     if context.user_data['question_count'] < 10:
         await play_question(update, context)
     else:
@@ -146,11 +158,14 @@ async def play_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Xử lý câu trả lời trong Game 2"""
+    if context.user_data['current_game'] != "game_2":
+        return
+
     user_choice = update.message.text.strip()
     current_question = context.user_data.get('current_question')
 
     if not current_question:
-        await update.message.reply_text("❌ Không có câu hỏi nào đang chạy. Gõ /play để bắt đầu.")
+        await update.message.reply_text("❌ Không có câu hỏi nào đang chạy.")
         return
 
     if user_choice not in ['1', '2', '3']:
@@ -190,11 +205,8 @@ def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
 
-    # Thêm handler cho /start và /play
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
-
-    # Thêm handler cho xử lý kịch bản và câu hỏi
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice_scenario))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer_question))
 
