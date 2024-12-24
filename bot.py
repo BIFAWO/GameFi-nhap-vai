@@ -30,20 +30,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- PHẦN 2: GAME 1 - KỸ NĂNG XỬ LÝ TÌNH HUỐNG ---
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Bắt đầu Game 1"""
-    # Kiểm tra nếu người chơi đã hoàn thành đủ 10 kịch bản
     if context.user_data['scenario_count'] < 10:
         await play_scenario(update, context)
     else:
-        # Nếu đã hoàn thành Game 1
         await update.message.reply_text(
             "🎯 **Bạn đã hoàn thành Game 1: Kỹ năng xử lý tình huống!**\n\n"
-            "✨ Hãy chờ Game 2 trong lần cập nhật tiếp theo.",
+            "✨ Chuyển sang Game 2 (nếu có).",
             parse_mode="Markdown"
         )
 
 async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Xử lý từng kịch bản trong Game 1"""
-    # Lấy dữ liệu từ Google Sheets
     scenarios = fetch_csv_data(DECISION_POINTS_URL)
     if not scenarios:
         await update.message.reply_text("❌ Không thể tải danh sách kịch bản. Vui lòng thử lại sau.")
