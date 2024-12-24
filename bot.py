@@ -14,47 +14,33 @@ logger = logging.getLogger(__name__)
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
 QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1301413371"
 
-# Hàm tải dữ liệu từ Google Sheets
-def fetch_csv_data(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        decoded_content = response.content.decode("utf-8")
-        data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
-        return data[1:]  # Bỏ dòng tiêu đề
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}")
-        return []
-
-# /start command
+# --- PHẦN 1: KHỞI TẠO ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     context.user_data['used_scenarios'] = set()
     context.user_data['used_questions'] = set()
     context.user_data['scenario_count'] = 0
     context.user_data['question_count'] = 0
-    context.user_data['total_stars'] = 0  # Tổng số Game Star từ kịch bản
-    context.user_data['total_score'] = 0  # Tổng điểm từ câu hỏi trí tuệ
+    context.user_data['total_stars'] = 0  # Tổng số Game Star từ Game 1
+    context.user_data['total_score'] = 0  # Tổng điểm từ Game 2
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
-        "⏩ Gõ /play để bắt đầu với kỹ năng xử lý tình huống!",
+        "⏩ Gõ /play để bắt đầu chơi!",
         parse_mode="Markdown"
     )
 
-# /play command
+# --- PHẦN 2: GAME 1 - KỸ NĂNG XỬ LÝ TÌNH HUỐNG ---
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data['scenario_count'] < 10:
         await play_scenario(update, context)
     else:
         await update.message.reply_text(
-            "🎯 **Chuyển sang cuộc thi Khám phá sức mạnh trí tuệ của bạn!** 🧠\n\n"
-            "⏩ Gõ tiếp để bắt đầu phần thi trí tuệ.",
+            "🎯 **Bạn đã hoàn thành Game 1: Kỹ năng xử lý tình huống!**\n\n"
+            "✨ Chuyển sang Game 2: Khám phá sức mạnh trí tuệ của bạn. Gõ /quiz để bắt đầu!",
             parse_mode="Markdown"
         )
-        await play_questions(update, context)
 
-# Phần 1: Kỹ năng xử lý tình huống
 async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     scenarios = fetch_csv_data(DECISION_POINTS_URL)
     if not scenarios:
@@ -110,18 +96,20 @@ async def handle_choice_scenario(update: Update, context: ContextTypes.DEFAULT_T
 
     await play(update, context)
 
-# Phần 2: Khám phá sức mạnh trí tuệ của bạn
-async def play_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data['question_count'] >= 10:
+# --- PHẦN 3: GAME 2 - KHÁM PHÁ SỨC MẠNH TRÍ TUỆ CỦA BẠN ---
+async def start_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data['question_count'] < 10:
+        await play_question(update, context)
+    else:
         await update.message.reply_text(
-            f"🏁 Bạn đã hoàn thành thử thách!\n"
+            f"🏁 Bạn đã hoàn thành Game 2: Khám phá sức mạnh trí tuệ của bạn!\n"
             f"⭐ Tổng Game Star: {context.user_data['total_stars']}\n"
-            f"🧠 Tổng điểm thử thách trí tuệ: {context.user_data['total_score']} điểm\n"
+            f"🧠 Tổng điểm: {context.user_data['total_score']} điểm.\n"
             "✨ Cảm ơn bạn đã tham gia!",
             parse_mode="Markdown"
         )
-        return
 
+async def play_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     questions = fetch_csv_data(QUESTIONS_URL)
     if not questions:
         await update.message.reply_text("❌ Không thể tải danh sách câu hỏi. Vui lòng thử lại sau.")
@@ -152,7 +140,7 @@ async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_T
     current_question = context.user_data.get('current_question')
 
     if not current_question:
-        await update.message.reply_text("❌ Không có câu hỏi nào đang chạy. Gõ /play để bắt đầu.")
+        await update.message.reply_text("❌ Không có câu hỏi nào đang chạy. Gõ /quiz để bắt đầu.")
         return
 
     if user_choice not in ['1', '2', '3']:
@@ -172,15 +160,16 @@ async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_T
             f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
         )
 
-    await play_questions(update, context)
+    await start_quiz(update, context)
 
-# Main function
+# --- PHẦN 4: CHẠY BOT ---
 def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
+    application.add_handler(CommandHandler("quiz", start_quiz))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice_scenario))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer_question))
 
