@@ -47,6 +47,11 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data['scenario_count'] < 10:
         await play_scenario(update, context)
     else:
+        await update.message.reply_text(
+            "🎯 **Chuyển sang cuộc thi Khám phá sức mạnh trí tuệ của bạn!** 🧠\n\n"
+            "⏩ Gõ tiếp để bắt đầu phần thi trí tuệ.",
+            parse_mode="Markdown"
+        )
         await play_questions(update, context)
 
 # Phần 1: Kỹ năng xử lý tình huống
@@ -159,12 +164,12 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['total_score'] += 10
         await update.message.reply_text(
             f"✅ Đúng rồi! Bạn đã trả lời đúng.\n"
-            f"🧠 Điểm hiện tại: {context.user_data['total_score']} điểm."
+            f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
         )
     else:
         await update.message.reply_text(
             f"❌ Sai rồi! Đáp án đúng là: {correct_answer}.\n"
-            f"🧠 Điểm hiện tại: {context.user_data['total_score']} điểm."
+            f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
         )
 
     await play_questions(update, context)
