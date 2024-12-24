@@ -16,16 +16,16 @@ DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0io
 QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1301413371"
 
 # Fetch data from Google Sheets
-def fetch_csv_data(url, tab_name):
+def fetch_csv_data(url):
     try:
-        logger.info(f"Fetching data from {tab_name} at {url}")
+        logger.info(f"Fetching data from {url}")
         response = requests.get(url)
         response.raise_for_status()
         decoded_content = response.content.decode("utf-8")
         data = list(csv.reader(decoded_content.splitlines(), delimiter=","))
         return data[1:]  # Skip header
     except Exception as e:
-        logger.error(f"Error fetching data from {tab_name}: {e}")
+        logger.error(f"Error fetching data: {e}")
         return []
 
 # /start command
@@ -58,7 +58,7 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await ask_question(update, context)
 
 async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    decision_points = fetch_csv_data(DECISION_POINTS_URL, "Decision Points")
+    decision_points = fetch_csv_data(DECISION_POINTS_URL)
     if not decision_points:
         await update.message.reply_text("❌ Không thể tải dữ liệu trò chơi. Vui lòng thử lại sau.")
         return
@@ -101,7 +101,7 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await play(update, context)
 
 async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    questions = fetch_csv_data(QUESTIONS_URL, "Questions")
+    questions = fetch_csv_data(QUESTIONS_URL)
     if not questions:
         await update.message.reply_text("❌ Không thể tải câu hỏi.")
         return
