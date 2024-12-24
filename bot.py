@@ -33,12 +33,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['used_questions'] = set()
     context.user_data['scenario_count'] = 0
     context.user_data['question_count'] = 0
-    context.user_data['total_stars'] = 0  # Tổng số Game Star đạt được
+    context.user_data['total_stars'] = 0  # Tổng số Game Star từ kịch bản
     context.user_data['total_score'] = 0  # Tổng điểm từ câu hỏi
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
-        "⏩ Gõ /play để bắt đầu chơi!",
+        "⏩ Gõ /play để bắt đầu chơi với kỹ năng xử lý tình huống!",
         parse_mode="Markdown"
     )
 
@@ -49,7 +49,7 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await play_questions(update, context)
 
-# Chơi kịch bản
+# Phần 1: Kỹ năng xử lý tình huống
 async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     scenarios = fetch_csv_data(DECISION_POINTS_URL)
     if not scenarios:
@@ -67,7 +67,7 @@ async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['scenario_count'] += 1
 
     await update.message.reply_text(
-        f"🗺️ *Kịch bản {context.user_data['scenario_count']}*\n\n"
+        f"🗺️ *Kỹ năng xử lý tình huống {context.user_data['scenario_count']}*\n\n"
         f"{scenario[0]}\n\n"
         f"1️⃣ {scenario[1]}\n"
         f"2️⃣ {scenario[3]}\n\n"
@@ -100,18 +100,18 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Bạn đã chọn: {chosen_option}.\n"
         f"⭐ Bạn nhận được: {stars_earned} Game Star.\n"
         f"🌟 Tổng Game Star hiện tại: {context.user_data['total_stars']}.\n\n"
-        "⏩ Chuyển sang kịch bản tiếp theo..."
+        "⏩ Chuyển sang tình huống tiếp theo..."
     )
 
     await play(update, context)
 
-# Chơi câu hỏi
+# Phần 2: Khám phá sức mạnh trí tuệ của bạn
 async def play_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data['question_count'] >= 10:
         await update.message.reply_text(
-            f"🏁 Bạn đã hoàn thành 10 câu hỏi thử thách!\n"
+            f"🏁 Bạn đã hoàn thành thử thách!\n"
             f"⭐ Tổng Game Star: {context.user_data['total_stars']}\n"
-            f"🧠 Tổng điểm thử thách: {context.user_data['total_score']}\n"
+            f"🧠 Tổng điểm thử thách trí tuệ: {context.user_data['total_score']} điểm\n"
             "✨ Cảm ơn bạn đã tham gia!",
             parse_mode="Markdown"
         )
@@ -133,7 +133,7 @@ async def play_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['question_count'] += 1
 
     await update.message.reply_text(
-        f"🤔 *Câu hỏi {context.user_data['question_count']}*\n\n"
+        f"🤔 *Khám phá sức mạnh trí tuệ của bạn - Câu {context.user_data['question_count']}*\n\n"
         f"{question[0]}\n\n"
         f"1️⃣ {question[1]}\n"
         f"2️⃣ {question[2]}\n"
@@ -159,12 +159,12 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['total_score'] += 10
         await update.message.reply_text(
             f"✅ Đúng rồi! Bạn đã trả lời đúng.\n"
-            f"🧠 Điểm thử thách hiện tại: {context.user_data['total_score']} điểm."
+            f"🧠 Điểm hiện tại: {context.user_data['total_score']} điểm."
         )
     else:
         await update.message.reply_text(
             f"❌ Sai rồi! Đáp án đúng là: {correct_answer}.\n"
-            f"🧠 Điểm thử thách hiện tại: {context.user_data['total_score']} điểm."
+            f"🧠 Điểm hiện tại: {context.user_data['total_score']} điểm."
         )
 
     await play_questions(update, context)
