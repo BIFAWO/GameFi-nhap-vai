@@ -158,7 +158,7 @@ async def play_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Xử lý câu trả lời trong Game 2"""
-    if context.user_data['current_game'] != "game_2":
+    if context.user_data.get('current_game') != "game_2":
         return
 
     user_choice = update.message.text.strip()
@@ -174,7 +174,7 @@ async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_T
 
     correct_answer = current_question[4].strip()
     if user_choice == correct_answer:
-        context.user_data['total_score'] += 10
+        context.user_data['total_score'] += 10  # Thêm điểm nếu đúng
         await update.message.reply_text(
             f"✅ Đúng rồi! Bạn đã trả lời đúng.\n"
             f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
@@ -185,6 +185,7 @@ async def handle_answer_question(update: Update, context: ContextTypes.DEFAULT_T
             f"🧠 Tổng điểm hiện tại: {context.user_data['total_score']} điểm."
         )
 
+    # Chuyển sang câu hỏi tiếp theo
     await start_quiz(update, context)
 
 # --- PHẦN 4: HÀM HỖ TRỢ ---
