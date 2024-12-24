@@ -132,8 +132,8 @@ async def ask_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['current_question'] = {
         "question_text": question[0],
         "options": question[1:4],
-        "correct_answer": question[4],
-        "score": int(question[5]),
+        "correct_answer": str(question[4]),  # Ensure correct_answer is a string
+        "score": 10,  # Fix score to 10 points per correct answer
         "start_time": time.time(),
     }
 
@@ -159,8 +159,12 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     answer_time = int(end_time - current_question['start_time'])
     context.user_data['time'] += answer_time
 
-    chosen_option = current_question['options'][int(user_choice) - 1]
-    correct_answer = current_question['correct_answer']
+    try:
+        chosen_option = current_question['options'][int(user_choice) - 1]
+        correct_answer = current_question['correct_answer']
+    except (IndexError, ValueError):
+        await update.message.reply_text("❌ Đã xảy ra lỗi trong quá trình xử lý câu trả lời. Vui lòng thử lại.")
+        return
 
     if user_choice == correct_answer:
         context.user_data['score'] += current_question['score']
