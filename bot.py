@@ -10,8 +10,9 @@ from telegram.ext.filters import TEXT, COMMAND
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Google Sheets URL cho Decision Points
+# Google Sheets URLs
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
+QUESTIONS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=1301413371"
 
 # Hàm tải dữ liệu từ Google Sheets
 def fetch_csv_data(url):
@@ -29,8 +30,11 @@ def fetch_csv_data(url):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     context.user_data['used_scenarios'] = set()
+    context.user_data['used_questions'] = set()
     context.user_data['scenario_count'] = 0
+    context.user_data['question_count'] = 0
     context.user_data['total_stars'] = 0  # Tổng số Game Star đạt được
+    context.user_data['total_score'] = 0  # Tổng điểm từ câu hỏi
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
@@ -40,34 +44,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # /play command
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data['scenario_count'] >= 10:
-        await update.message.reply_text(
-            f"🏁 Bạn đã hoàn thành tất cả 10 kịch bản!\n"
-            f"⭐ Tổng Game Star của bạn: {context.user_data['total_stars']}\n"
-            "✨ Cảm ơn bạn đã tham gia!",
-            parse_mode="Markdown"
-        )
-        return
+    if context.user_data['scenario_count'] < 10:
+        await play_scenario(update, context)
+    else:
+        await play_questions(update, context)
 
-    # Lấy danh sách Scenario
+# Chơi kịch bản
+async def play_scenario(update: Update, context: ContextTypes.DEFAULT_TYPE):
     scenarios = fetch_csv_data(DECISION_POINTS_URL)
     if not scenarios:
         await update.message.reply_text("❌ Không thể tải danh sách kịch bản. Vui lòng thử lại sau.")
         return
 
-    # Lọc ra các kịch bản chưa được sử dụng
     unused_scenarios = [s for s in scenarios if s[0] not in context.user_data['used_scenarios']]
     if not unused_scenarios:
         await update.message.reply_text("⚠️ Không còn kịch bản nào mới để chơi.")
         return
 
-    # Chọn một Scenario ngẫu nhiên
     scenario = random.choice(unused_scenarios)
     context.user_data['used_scenarios'].add(scenario[0])
     context.user_data['current_scenario'] = scenario
     context.user_data['scenario_count'] += 1
 
-    # Gửi kịch bản cho người chơi (ẩn điểm số)
     await update.message.reply_text(
         f"🗺️ *Kịch bản {context.user_data['scenario_count']}*\n\n"
         f"{scenario[0]}\n\n"
@@ -77,33 +75,27 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-# Xử lý lựa chọn của người chơi
 async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_choice = update.message.text.strip()
     current_scenario = context.user_data.get('current_scenario')
 
-    # Kiểm tra xem người chơi đã chọn kịch bản hay chưa
     if not current_scenario:
         await update.message.reply_text("❌ Không có kịch bản nào đang chạy. Gõ /play để bắt đầu.")
         return
 
-    # Đảm bảo lựa chọn hợp lệ
     if user_choice not in ['1', '2']:
         await update.message.reply_text("❌ Vui lòng nhập 1 hoặc 2.")
         return
 
-    # Xử lý phản hồi dựa trên lựa chọn
     if user_choice == '1':
-        stars_earned = int(current_scenario[2])  # Game Star từ Option 1
+        stars_earned = int(current_scenario[2])
         chosen_option = current_scenario[1]
     else:
-        stars_earned = int(current_scenario[4])  # Game Star từ Option 2
+        stars_earned = int(current_scenario[4])
         chosen_option = current_scenario[3]
 
-    # Cập nhật tổng số Game Star
     context.user_data['total_stars'] += stars_earned
 
-    # Gửi phản hồi và tiếp tục
     await update.message.reply_text(
         f"✅ Bạn đã chọn: {chosen_option}.\n"
         f"⭐ Bạn nhận được: {stars_earned} Game Star.\n"
@@ -111,20 +103,82 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⏩ Chuyển sang kịch bản tiếp theo..."
     )
 
-    # Tiếp tục chơi
     await play(update, context)
+
+# Chơi câu hỏi
+async def play_questions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.user_data['question_count'] >= 10:
+        await update.message.reply_text(
+            f"🏁 Bạn đã hoàn thành 10 câu hỏi thử thách!\n"
+            f"⭐ Tổng Game Star: {context.user_data['total_stars']}\n"
+            f"🧠 Tổng điểm thử thách: {context.user_data['total_score']}\n"
+            "✨ Cảm ơn bạn đã tham gia!",
+            parse_mode="Markdown"
+        )
+        return
+
+    questions = fetch_csv_data(QUESTIONS_URL)
+    if not questions:
+        await update.message.reply_text("❌ Không thể tải danh sách câu hỏi. Vui lòng thử lại sau.")
+        return
+
+    unused_questions = [q for q in questions if q[0] not in context.user_data['used_questions']]
+    if not unused_questions:
+        await update.message.reply_text("⚠️ Không còn câu hỏi mới để chơi.")
+        return
+
+    question = random.choice(unused_questions)
+    context.user_data['used_questions'].add(question[0])
+    context.user_data['current_question'] = question
+    context.user_data['question_count'] += 1
+
+    await update.message.reply_text(
+        f"🤔 *Câu hỏi {context.user_data['question_count']}*\n\n"
+        f"{question[0]}\n\n"
+        f"1️⃣ {question[1]}\n"
+        f"2️⃣ {question[2]}\n"
+        f"3️⃣ {question[3]}\n\n"
+        "⏩ Nhập 1, 2 hoặc 3 để trả lời.",
+        parse_mode="Markdown"
+    )
+
+async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_choice = update.message.text.strip()
+    current_question = context.user_data.get('current_question')
+
+    if not current_question:
+        await update.message.reply_text("❌ Không có câu hỏi nào đang chạy. Gõ /play để bắt đầu.")
+        return
+
+    if user_choice not in ['1', '2', '3']:
+        await update.message.reply_text("❌ Vui lòng nhập 1, 2 hoặc 3.")
+        return
+
+    correct_answer = current_question[4].strip()
+    if user_choice == correct_answer:
+        context.user_data['total_score'] += 10
+        await update.message.reply_text(
+            f"✅ Đúng rồi! Bạn đã trả lời đúng.\n"
+            f"🧠 Điểm thử thách hiện tại: {context.user_data['total_score']} điểm."
+        )
+    else:
+        await update.message.reply_text(
+            f"❌ Sai rồi! Đáp án đúng là: {correct_answer}.\n"
+            f"🧠 Điểm thử thách hiện tại: {context.user_data['total_score']} điểm."
+        )
+
+    await play_questions(update, context)
 
 # Main function
 def main():
     TOKEN = "7595985963:AAGoUSk8pIpAiSDaQwTufWqmYs3Kvn5mmt4"
     application = Application.builder().token(TOKEN).build()
 
-    # Thêm các lệnh xử lý
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("play", play))
     application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_choice))
+    application.add_handler(MessageHandler(TEXT & ~COMMAND, handle_answer))
 
-    # Chạy bot
     application.run_polling()
 
 if __name__ == "__main__":
