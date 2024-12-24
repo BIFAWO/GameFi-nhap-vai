@@ -10,7 +10,7 @@ from telegram.ext.filters import TEXT, COMMAND
 logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Google Sheets URL cho danh sách Scenario
+# Google Sheets URL cho Decision Points
 DECISION_POINTS_URL = "https://docs.google.com/spreadsheets/d/1sOqCrOl-kTKKQQ0ioYzYkqJwRM9qxsndxiLmo_RDZjI/export?format=csv&gid=0"
 
 # Hàm tải dữ liệu từ Google Sheets
@@ -30,6 +30,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     context.user_data['used_scenarios'] = set()
     context.user_data['scenario_count'] = 0
+    context.user_data['total_stars'] = 0  # Tổng số Game Star đạt được
 
     await update.message.reply_text(
         "🎮 **Chào mừng bạn đến với GameFi Nhập Vai!** 🎉\n\n"
@@ -41,8 +42,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data['scenario_count'] >= 10:
         await update.message.reply_text(
-            "🏁 Bạn đã hoàn thành tất cả 10 kịch bản!\n"
-            "Cảm ơn bạn đã chơi.",
+            f"🏁 Bạn đã hoàn thành tất cả 10 kịch bản!\n"
+            f"⭐ Tổng Game Star của bạn: {context.user_data['total_stars']}\n"
+            "✨ Cảm ơn bạn đã tham gia!",
             parse_mode="Markdown"
         )
         return
@@ -69,8 +71,8 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"🗺️ *Kịch bản {context.user_data['scenario_count']}*\n\n"
         f"{scenario[0]}\n\n"
-        f"1️⃣ {scenario[1]}\n"
-        f"2️⃣ {scenario[3]}\n\n"
+        f"1️⃣ {scenario[1]} (+{scenario[2]} Game Star)\n"
+        f"2️⃣ {scenario[3]} (+{scenario[4]} Game Star)\n\n"
         "⏩ Nhập 1 hoặc 2 để chọn.",
         parse_mode="Markdown"
     )
@@ -91,10 +93,22 @@ async def handle_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Xử lý phản hồi dựa trên lựa chọn
-    chosen_option = current_scenario[1] if user_choice == '1' else current_scenario[3]
+    if user_choice == '1':
+        stars_earned = int(current_scenario[2])  # Game Star từ Option 1
+        chosen_option = current_scenario[1]
+    else:
+        stars_earned = int(current_scenario[4])  # Game Star từ Option 2
+        chosen_option = current_scenario[3]
+
+    # Cập nhật tổng số Game Star
+    context.user_data['total_stars'] += stars_earned
+
+    # Gửi phản hồi và tiếp tục
     await update.message.reply_text(
         f"✅ Bạn đã chọn: {chosen_option}.\n"
-        f"⏩ Chuyển sang kịch bản tiếp theo..."
+        f"⭐ Bạn nhận được: {stars_earned} Game Star.\n"
+        f"🌟 Tổng Game Star hiện tại: {context.user_data['total_stars']}.\n\n"
+        "⏩ Chuyển sang kịch bản tiếp theo..."
     )
 
     # Tiếp tục chơi
